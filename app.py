@@ -1,14 +1,10 @@
 from flask import Flask, request
-from telegram.ext import ApplicationBuilder, WebhookUpdater
 import os
+import asyncio
 
 app = Flask(__name__)
 
-# Environment variables
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g., https://your-render-url.onrender.com/webhook
-
-# Import bot handlers (defined in bot.py)
+# Import bot setup
 from bot import setup_bot
 
 @app.route('/webhook', methods=['POST'])
@@ -19,23 +15,25 @@ def webhook():
 
 @app.route('/health', methods=['GET'])
 def health():
-    return "Bot is alive!", 200
+    return "🎮 SAS Game Bot is alive and ready to play!", 200
 
-async def start_webhook():
-    global app
+async def start_bot():
     application = setup_bot()
     await application.initialize()
     await application.start()
 
     # Set webhook
-    await application.bot.set_webhook(url=WEBHOOK_URL)
+    webhook_url = os.getenv("WEBHOOK_URL")
+    if webhook_url:
+        await application.bot.set_webhook(url=webhook_url)
+        print(f"✅ Webhook set to: {webhook_url}")
+    else:
+        print("❌ WEBHOOK_URL not set!")
 
-    # Attach application to Flask
     app.bot = application
     return app
 
-# Run this in main
 if __name__ == "__main__":
-    import asyncio
-    app = asyncio.run(start_webhook())
-    app.run(port=int(os.getenv("PORT", 8080)))
+    port = int(os.getenv("PORT", 8080))
+    app = asyncio.run(start_bot())
+    app.run(port=port)
